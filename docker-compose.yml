@@ -19,12 +19,10 @@ services:
     container_name: minio_mc
     depends_on:
       - minio
-    entrypoint: /bin/sh -c
-    command: |
-      "while ! curl -s http://minio:9000;
-      do sleep 10;
-      done;
-      mc alias set myminio http://minio:9000 minioadmin minio@1234!;
+    entrypoint: |
+      sh -c "
+      sleep 10 &&
+      mc alias set myminio http://minio:9000 minioadmin minio@1234! &&
       mc mb myminio/landing
       "
     
