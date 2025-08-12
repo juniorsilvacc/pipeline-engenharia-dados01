@@ -46,6 +46,7 @@ services:
       dockerfile: airflow/config_airflow/airflow.Dockerfile
     container_name: airflow
     environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://post_airflow:airflow_123@postgres-airflow:5432/airflow
       AIRFLOW__CORE__LOAD_EX: 'false'
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'

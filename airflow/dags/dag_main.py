@@ -1,0 +1,44 @@
+from datetime import timedelta
+from airflow.decorators import dag
+from airflow.operators.python import PythonOperator
+from airflow.utils.dates import days_ago
+from airflow.utils.task_group import TaskGroup
+
+from tasks.task_parquet import postgres_to_minio_etl_parquet
+
+default_args = {
+    'owner': 'airflow',
+    'depends_on_past': False,
+    'start_date': days_ago(1),
+    'email_on_failure': False,
+    'email_on_retry': False,
+    'retries': 1,
+    'retry_delay': timedelta(minutes=5),
+}
+
+@dag(
+    dag_id='main_dag',
+    default_args=default_args,
+    description='Main DAG calling different tasks',
+    schedule_interval=timedelta(days=1),
+    catchup=False
+)
+def main_dag():
+    table_names = ['veiculos', 'estados', 'cidades', 'concessionarias', 'vendedores', 'clientes', 'vendas']  # Altere conforme necessário
+    bucket_name = 'landing'
+    endpoint_url = 'http://minio:9000'
+    access_key = 'minioadmin'
+    secret_key = 'minio@1234!'
+    
+    with TaskGroup("group_task_parquet", tooltip="Tasks processadas do banco de dados externo para o minIO, salvando em .parquet") as group_task_parquet:
+        for table_name in table_names:
+            PythonOperator(
+                task_id=f'task_parquet_{table_name}',
+                python_callable=postgres_to_minio_etl_parquet,
+                op_args=[table_name, bucket_name, endpoint_url, access_key, secret_key]
+            )
+            
+    # Definindo a ordem de execução dos grupos
+    group_task_parquet
+
+main_dag_instance = main_dag()
