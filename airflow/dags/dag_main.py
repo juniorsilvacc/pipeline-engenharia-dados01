@@ -5,6 +5,7 @@ from airflow.utils.dates import days_ago
 from airflow.utils.task_group import TaskGroup
 
 from tasks.task_parquet import postgres_to_minio_etl_parquet
+from tasks.task_sheets import google_sheet_to_minio_etl
 
 default_args = {
     'owner': 'airflow',
@@ -24,13 +25,15 @@ default_args = {
     catchup=False
 )
 def main_dag():
-    table_names = ['veiculos', 'estados', 'cidades', 'concessionarias', 'vendedores', 'clientes', 'vendas']  # Altere conforme necessário
+    table_names = ['veiculos', 'estados', 'cidades', 'concessionarias', 'vendedores', 'clientes', 'vendas']     # Altere conforme necessário
+    google_sheets = ['Clientes_Bike', 'Vendedores_Bike', 'Produtos_Bike', 'Vendas_Bike', 'ItensVendas_Bike']    # Altere para o nome das abas da sua planilha
     bucket_name = 'landing'
     endpoint_url = 'http://minio:9000'
     access_key = 'minioadmin'
     secret_key = 'minio@1234!'
+    sheet_id = '1Ix_ng4DYA7_CtU7vp62c7-zBcthyG976bKo9344FDbs'
     
-    with TaskGroup("group_task_parquet", tooltip="Tasks processadas do banco de dados externo para o minIO, salvando em .parquet") as group_task_parquet:
+    with TaskGroup("group_task_parquet", tooltip="Tasks processadas do banco de dados externo para o MinIO, salvando em .parquet") as group_task_parquet:
         for table_name in table_names:
             PythonOperator(
                 task_id=f'task_parquet_{table_name}',
@@ -38,7 +41,15 @@ def main_dag():
                 op_args=[table_name, bucket_name, endpoint_url, access_key, secret_key]
             )
             
+    with TaskGroup("group_task_sheets", tooltip="Tasks processadas do google sheets para MinIO, salvando em .parquet") as group_task_sheets:
+        for sheets_name in google_sheets:
+            PythonOperator(
+                task_id=f'task_sheets_{sheets_name.lower()}',
+                python_callable=google_sheet_to_minio_etl,
+                op_args=[sheet_id, sheets_name, bucket_name, endpoint_url, access_key, secret_key]
+            )
+            
     # Definindo a ordem de execução dos grupos
-    group_task_parquet
+    group_task_parquet >> group_task_sheets
 
 main_dag_instance = main_dag()
