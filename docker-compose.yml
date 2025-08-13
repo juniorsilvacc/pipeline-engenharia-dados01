@@ -61,7 +61,21 @@ services:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/config_airflow:/opt/airflow/config_airflow
     command: ['airflow', 'standalone']
+  
+  mariadb:
+    image: mariadb:10
+    container_name: local_mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: root 
+      MYSQL_DATABASE: lakeestudo        
+      MYSQL_USER: mariadb            
+      MYSQL_PASSWORD: maria123
+    ports:
+      - "3306:3306"                      
+    volumes:
+      - mariadb_data:/var/lib/mysql
 
 volumes:
   postgres_data:
   minio_data:
+  mariadb_data:
